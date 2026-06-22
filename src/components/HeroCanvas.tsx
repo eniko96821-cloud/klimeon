@@ -1,304 +1,284 @@
 "use client"
 
-import { motion, useAnimationControls } from "framer-motion"
+import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 
-/* ── SNOWFLAKE PARTICLE ── */
-function Snowflake({ x, delay, duration }: { x: number; delay: number; duration: number }) {
+/* ── SNOWFLAKE ── */
+function Snowflake({ x, delay, duration, size = 18 }: { x: number; delay: number; duration: number; size?: number }) {
   return (
     <motion.div
-      className="absolute text-sky-300 select-none pointer-events-none"
-      style={{ left: `${x}%`, top: "62%", fontSize: "14px", opacity: 0 }}
+      className="absolute select-none pointer-events-none"
+      style={{ left: `${x}%`, top: "72%", fontSize: size, opacity: 0, zIndex: 10 }}
       animate={{
-        y: ["0%", "280%"],
-        x: [`${x}%`, `${x + (Math.random() - 0.5) * 8}%`],
-        opacity: [0, 0.8, 0.6, 0],
+        y: ["0px", "160px"],
+        x: [`0px`, `${(Math.random() - 0.5) * 40}px`],
+        opacity: [0, 1, 0.8, 0],
         rotate: [0, 180],
       }}
-      transition={{
-        duration,
-        delay,
-        repeat: Infinity,
-        ease: "easeIn",
-      }}
+      transition={{ duration, delay, repeat: Infinity, ease: "easeIn" }}
     >
-      ❄
+      <span style={{ color: "#7dd3fc" }}>❄</span>
     </motion.div>
   )
 }
 
-/* ── AIR WAVE LINE ── */
-function AirWave({ y, delay, width }: { y: number; delay: number; width: number }) {
+/* ── WAVY AIR LINES ── */
+function AirLine({ y, delay, color = "#7dd3fc" }: { y: number; delay: number; color?: string }) {
   return (
     <motion.div
-      className="absolute rounded-full"
-      style={{
-        height: "2px",
-        width,
-        top: `${y}%`,
-        left: "12%",
-        background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.5), rgba(56,189,248,0.3), transparent)",
-        opacity: 0,
-      }}
-      animate={{
-        x: ["-10%", "30%"],
-        opacity: [0, 0.7, 0.5, 0],
-        scaleX: [0.6, 1, 0.8],
-      }}
-      transition={{
-        duration: 2.2,
-        delay,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-    />
-  )
-}
-
-/* ── TEMP BADGE ── */
-function TempBadge({ temp }: { temp: number }) {
-  const color = temp > 30 ? "#ef4444" : temp > 26 ? "#fb923c" : "#38bdf8"
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: -10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ delay: 0.5, type: "spring" }}
-      className="absolute -top-8 right-4 rounded-2xl px-4 py-2 border backdrop-blur-xl"
-      style={{
-        background: "rgba(5,5,5,0.7)",
-        borderColor: `${color}40`,
-        boxShadow: `0 0 24px ${color}30`,
-      }}
+      className="absolute pointer-events-none"
+      style={{ top: `${y}%`, left: "10%", right: "10%", height: 3, opacity: 0 }}
+      animate={{ opacity: [0, 0.9, 0], x: ["-5%", "8%"] }}
+      transition={{ duration: 1.8, delay, repeat: Infinity, ease: "easeInOut" }}
     >
-      <div className="text-xs text-white/40 font-medium tracking-widest uppercase mb-0.5">Teplota</div>
-      <motion.div
-        key={temp}
-        initial={{ y: -6, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.15 }}
-        className="text-3xl font-black tabular-nums"
-        style={{ color, textShadow: `0 0 16px ${color}60` }}
-      >
-        {temp}°C
-      </motion.div>
+      <svg width="100%" height="10" viewBox="0 0 200 10" preserveAspectRatio="none">
+        <path
+          d="M0,5 C20,2 40,8 60,5 C80,2 100,8 120,5 C140,2 160,8 180,5 C190,3 200,5 200,5"
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+      </svg>
     </motion.div>
   )
 }
 
-/* ── MAIN AC ILLUSTRATION ── */
-function ACSvg({ on }: { on: boolean }) {
+/* ── MAIN CARTOON AC SVG ── */
+function CartoonAC({ on }: { on: boolean }) {
   return (
     <svg
-      viewBox="0 0 480 180"
+      viewBox="0 0 420 220"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="w-full max-w-lg drop-shadow-2xl"
-      style={{ filter: on ? "drop-shadow(0 0 28px rgba(56,189,248,0.18))" : "none" }}
+      className="w-full"
     >
-      {/* ── Shadow ── */}
-      <ellipse cx="240" cy="174" rx="180" ry="8" fill="rgba(0,0,0,0.25)" />
+      {/* Drop shadow */}
+      <ellipse cx="210" cy="210" rx="160" ry="10" fill="rgba(0,0,0,0.18)" />
 
-      {/* ── Main body ── */}
-      {/* Background white body */}
-      <rect x="12" y="22" width="456" height="142" rx="28" fill="url(#bodyGrad)" />
+      {/* ── MAIN BODY ── thick cartoon outline */}
+      <rect x="10" y="10" width="400" height="150" rx="32" fill="#ffffff" />
+      <rect x="10" y="10" width="400" height="150" rx="32"
+        fill="none" stroke="#1e293b" strokeWidth="5" />
 
-      {/* Top gloss highlight */}
-      <rect x="20" y="24" width="440" height="48" rx="22"
-        fill="url(#gloss)" opacity="0.7" />
+      {/* Top gloss band */}
+      <rect x="16" y="14" width="388" height="50" rx="26"
+        fill="url(#gloss)" opacity="0.6" />
 
-      {/* ── Silver accent band ── */}
-      <rect x="14" y="128" width="452" height="20" rx="4" fill="url(#silverBand)" />
+      {/* Blue accent stripe at top */}
+      <rect x="10" y="10" width="400" height="22" rx="16"
+        fill={on ? "#38bdf8" : "#cbd5e1"} />
+      <rect x="10" y="10" width="400" height="22" rx="16"
+        fill="none" stroke="#1e293b" strokeWidth="5" />
 
-      {/* ── Bottom vent area ── */}
-      <rect x="14" y="142" width="452" height="22" rx="6" fill="#dde4ed" />
-      {/* Louver slats */}
-      {Array.from({ length: 14 }).map((_, i) => (
-        <rect key={i} x={28 + i * 31} y="144" width="20" height="18" rx="2" fill="#c8d2de" />
+      {/* ── VENTS AREA ── */}
+      <rect x="10" y="148" width="400" height="32" rx="18" fill="#e0e7ef" />
+      <rect x="10" y="148" width="400" height="32" rx="18"
+        fill="none" stroke="#1e293b" strokeWidth="5" />
+
+      {/* Vent slats */}
+      {Array.from({ length: 10 }).map((_, i) => (
+        <motion.rect
+          key={i}
+          x={24 + i * 37}
+          y="152"
+          width="26"
+          height="24"
+          rx="5"
+          fill={on ? "#bae6fd" : "#c8d2de"}
+          animate={on ? { y: [152, 158, 152] } : { y: 152 }}
+          transition={{ duration: 2, delay: i * 0.05, repeat: on ? Infinity : 0, ease: "easeInOut" }}
+        />
       ))}
 
-      {/* ── Vent flap (animated open) ── */}
-      <motion.rect
-        x="14" y="158" width="452" height="6" rx="3"
-        fill="#b8c4d2"
-        animate={{ y: on ? 164 : 158, scaleY: on ? 0.6 : 1 }}
-        transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 60 }}
-      />
-
-      {/* ── Digital display (top right) ── */}
-      <rect x="368" y="38" width="80" height="52" rx="8" fill="#0a1420" />
-      <rect x="371" y="41" width="74" height="46" rx="6" fill="#0d1c2e" />
-      {/* Display glow when on */}
+      {/* ── DISPLAY PANEL (right side) ── */}
+      <rect x="310" y="32" width="90" height="65" rx="14" fill="#0f172a" />
+      <rect x="313" y="35" width="84" height="59" rx="11"
+        fill={on ? "#0c2a40" : "#0f172a"} />
       {on && (
-        <rect x="371" y="41" width="74" height="46" rx="6"
-          fill="none" stroke="#0ea5e9" strokeWidth="1" opacity="0.6" />
+        <rect x="313" y="35" width="84" height="59" rx="11"
+          fill="none" stroke="#38bdf8" strokeWidth="1.5" opacity="0.7" />
       )}
-      {/* Temperature digits in display */}
+
+      {/* Display temp */}
       <motion.text
-        x="408"
-        y="70"
+        x="355" y="72"
         textAnchor="middle"
-        fontFamily="monospace"
-        fontWeight="bold"
-        fontSize="20"
-        animate={{ fill: on ? "#38bdf8" : "#334455" }}
-        transition={{ duration: 0.5 }}
+        fontFamily="'Courier New', monospace"
+        fontWeight="900"
+        fontSize="22"
+        animate={{ fill: on ? "#38bdf8" : "#334466" }}
+        transition={{ duration: 0.6 }}
       >
-        22°
+        22°C
       </motion.text>
 
       {/* LED dot */}
-      <motion.circle
-        cx="398" cy="78" r="3"
-        animate={{ fill: on ? "#38bdf8" : "#223", opacity: on ? 1 : 0.3 }}
+      <motion.circle cx="345" cy="83" r="4"
+        animate={{ fill: on ? "#4ade80" : "#1e293b" }}
         transition={{ duration: 0.4 }}
       />
-
-      {/* LED blink */}
       {on && (
-        <motion.circle cx="398" cy="78" r="5"
-          animate={{ opacity: [0.4, 0, 0.4], r: [3, 7, 3] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          fill="none" stroke="#38bdf8" strokeWidth="1"
+        <motion.circle cx="345" cy="83" r="4"
+          animate={{ opacity: [1, 0.2, 1] }}
+          transition={{ duration: 1.2, repeat: Infinity }}
+          fill="#4ade80"
         />
       )}
 
-      {/* ── Logo text ── */}
-      <text x="200" y="90" textAnchor="middle"
-        fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600"
-        fill="#a0adb8" letterSpacing="4">
+      {/* ── BRAND TEXT ── */}
+      <text x="180" y="100"
+        textAnchor="middle"
+        fontFamily="system-ui, sans-serif"
+        fontSize="13"
+        fontWeight="700"
+        fill="#64748b"
+        letterSpacing="5"
+      >
         KLIMEON
       </text>
 
-      {/* ── Subtle crease line ── */}
-      <line x1="20" y1="108" x2="460" y2="108" stroke="#d0d8e4" strokeWidth="0.8" />
-
-      {/* ── Blue glow stripe when on ── */}
+      {/* ── POWER LED stripe ── */}
       <motion.rect
-        x="14" y="126" width="452" height="3" rx="1.5"
-        animate={{ fill: on ? "#0ea5e9" : "#b0bcc8", opacity: on ? 0.8 : 0.4 }}
-        transition={{ duration: 0.6 }}
+        x="18" y="142" width="384" height="6" rx="3"
+        animate={{ fill: on ? "#0ea5e9" : "#94a3b8", opacity: on ? 0.9 : 0.4 }}
+        transition={{ duration: 0.7 }}
       />
       {on && (
         <motion.rect
-          x="14" y="126" width="452" height="3" rx="1.5"
-          fill="#38bdf8"
-          animate={{ opacity: [0.4, 0.9, 0.4] }}
-          transition={{ duration: 2.5, repeat: Infinity }}
+          x="18" y="142" width="384" height="6" rx="3"
+          fill="#7dd3fc"
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
         />
       )}
 
-      {/* ── Gradients ── */}
+      {/* ── CARTOON CHEEKS (character vibes) ── */}
+      <circle cx="80" cy="95" r="18" fill="rgba(251,146,60,0.12)" />
+      <circle cx="280" cy="95" r="18" fill="rgba(251,146,60,0.12)" />
+
       <defs>
-        <linearGradient id="bodyGrad" x1="240" y1="22" x2="240" y2="164" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#f8fafd" />
-          <stop offset="60%" stopColor="#f0f4f9" />
-          <stop offset="100%" stopColor="#e4eaf2" />
-        </linearGradient>
-        <linearGradient id="gloss" x1="240" y1="24" x2="240" y2="72" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
-        </linearGradient>
-        <linearGradient id="silverBand" x1="14" y1="138" x2="466" y2="138" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#b0bcc8" />
-          <stop offset="30%" stopColor="#d0dae4" />
-          <stop offset="50%" stopColor="#e0e8f0" />
-          <stop offset="70%" stopColor="#d0dae4" />
-          <stop offset="100%" stopColor="#b0bcc8" />
+        <linearGradient id="gloss" x1="210" y1="14" x2="210" y2="64" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
       </defs>
     </svg>
   )
 }
 
-/* ── SNOWFLAKES CONFIG ── */
 const FLAKES = [
-  { x: 18, delay: 0.2, duration: 2.8 },
-  { x: 30, delay: 0.8, duration: 3.2 },
-  { x: 42, delay: 0.0, duration: 2.5 },
-  { x: 55, delay: 1.2, duration: 3.0 },
-  { x: 66, delay: 0.4, duration: 2.7 },
-  { x: 74, delay: 1.6, duration: 3.4 },
-  { x: 24, delay: 1.0, duration: 2.9 },
-  { x: 60, delay: 0.6, duration: 2.6 },
+  { x: 12, delay: 0.1, duration: 2.4, size: 20 },
+  { x: 24, delay: 0.7, duration: 2.8, size: 16 },
+  { x: 36, delay: 0.3, duration: 2.6, size: 22 },
+  { x: 48, delay: 1.1, duration: 2.3, size: 18 },
+  { x: 60, delay: 0.5, duration: 2.9, size: 20 },
+  { x: 72, delay: 1.4, duration: 2.5, size: 16 },
+  { x: 82, delay: 0.9, duration: 2.7, size: 24 },
+  { x: 20, delay: 1.7, duration: 2.4, size: 18 },
+  { x: 55, delay: 0.2, duration: 3.0, size: 14 },
 ]
 
-const WAVES = [
-  { y: 67, delay: 0,   width: 120 },
-  { y: 71, delay: 0.4, width: 90  },
-  { y: 75, delay: 0.8, width: 140 },
-  { y: 69, delay: 1.2, width: 80  },
-  { y: 73, delay: 0.2, width: 110 },
+const AIRLINES = [
+  { y: 74, delay: 0.0 },
+  { y: 78, delay: 0.3 },
+  { y: 82, delay: 0.6 },
+  { y: 70, delay: 0.9 },
+  { y: 86, delay: 1.2 },
 ]
 
-/* ── MAIN EXPORT ── */
 export default function HeroCanvas() {
   const [on, setOn] = useState(false)
   const [temp, setTemp] = useState(36)
 
   useEffect(() => {
-    const t1 = setTimeout(() => setOn(true), 1400)
+    const t1 = setTimeout(() => setOn(true), 1200)
     let t = 36
     const iv = setInterval(() => {
-      t = Math.max(22, t - 0.5)
-      setTemp(Math.round(t))
+      t = Math.max(22, t - 0.6)
+      setTemp(Math.round(t * 10) / 10)
       if (t <= 22) clearInterval(iv)
-    }, 120)
+    }, 100)
     return () => { clearTimeout(t1); clearInterval(iv) }
   }, [])
 
+  const tempColor = temp > 30 ? "#ef4444" : temp > 26 ? "#fb923c" : "#38bdf8"
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div className="relative w-full max-w-xl px-6">
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+      <div className="relative w-full max-w-lg px-4">
 
         {/* TEMP BADGE */}
-        <TempBadge temp={temp} />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.7, y: -10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+          className="absolute -top-12 right-6 z-20 rounded-2xl px-4 py-2.5"
+          style={{
+            background: "rgba(5,5,5,0.85)",
+            border: `2px solid ${tempColor}50`,
+            boxShadow: `0 0 28px ${tempColor}30`,
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          <div className="text-[10px] font-semibold tracking-widest uppercase mb-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+            Teplota
+          </div>
+          <motion.div
+            key={Math.round(temp)}
+            initial={{ y: -4, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-3xl font-black tabular-nums leading-none"
+            style={{ color: tempColor, textShadow: `0 0 20px ${tempColor}80` }}
+          >
+            {Math.round(temp)}°C
+          </motion.div>
+        </motion.div>
 
         {/* AIR WAVES */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {on && WAVES.map((w, i) => (
-            <AirWave key={i} {...w} />
-          ))}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 5 }}>
+          {on && AIRLINES.map((a, i) => <AirLine key={i} {...a} />)}
         </div>
 
         {/* AC UNIT */}
         <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          initial={{ opacity: 0, y: 40, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          style={{
-            animation: "float 4s ease-in-out infinite",
-          }}
+          style={{ animation: "acFloat 4s ease-in-out infinite" }}
         >
           <style>{`
-            @keyframes float {
+            @keyframes acFloat {
               0%, 100% { transform: translateY(0px); }
-              50% { transform: translateY(-10px); }
+              50% { transform: translateY(-12px); }
             }
           `}</style>
-          <ACSvg on={on} />
+          <CartoonAC on={on} />
         </motion.div>
 
         {/* SNOWFLAKES */}
-        <div className="absolute inset-0 overflow-visible pointer-events-none">
-          {on && FLAKES.map((f, i) => (
-            <Snowflake key={i} {...f} />
-          ))}
+        <div className="absolute inset-0 overflow-visible pointer-events-none" style={{ zIndex: 15 }}>
+          {on && FLAKES.map((f, i) => <Snowflake key={i} {...f} />)}
         </div>
 
-        {/* ON label */}
+        {/* STATUS PILL */}
         {on && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs text-sky-400/70 font-medium"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-full z-20"
+            style={{
+              background: "rgba(14,165,233,0.12)",
+              border: "1px solid rgba(14,165,233,0.25)",
+            }}
           >
             <motion.span
-              animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              animate={{ opacity: [1, 0.2, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
               className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block"
             />
-            Klimeon beží · Chladenie aktívne
+            <span className="text-xs font-medium text-sky-400">Klimeon beží · Chladenie aktívne</span>
           </motion.div>
         )}
       </div>
