@@ -1,162 +1,88 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useEffect, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ArrowRight, ChevronDown, Star, Zap, Clock } from "lucide-react"
+import { useEffect, useState, useRef } from "react"
+import { motion } from "framer-motion"
+import { ArrowRight, ChevronDown, Star, Zap, Clock, CheckCircle } from "lucide-react"
 
-// Dynamic import – no SSR for Three.js
-const HeroCanvas = dynamic(() => import("./HeroCanvas"), { ssr: false })
+const ACAnimation = dynamic(() => import("./HeroCanvas"), { ssr: false })
 
-function TempBadge() {
-  const [temp, setTemp] = useState(38)
-  const [phase, setPhase] = useState<"hot" | "cooling" | "cool">("hot")
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPhase("cooling")
-      let t = 38
-      const interval = setInterval(() => {
-        t -= 1
-        setTemp(t)
-        if (t <= 22) {
-          setTemp(22)
-          setPhase("cool")
-          clearInterval(interval)
-        }
-      }, 70)
-      return () => clearInterval(interval)
-    }, 1800)
-    return () => clearTimeout(timer)
-  }, [])
-
-  const isHot = phase === "hot"
-  const isCool = phase === "cool"
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8, y: -20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ delay: 1.0, duration: 0.7, type: "spring", stiffness: 120 }}
-      className="inline-flex flex-col items-center"
-    >
-      <div
-        className="rounded-2xl px-6 py-4 backdrop-blur-2xl border transition-all duration-500 relative overflow-hidden"
-        style={{
-          background: isCool
-            ? "rgba(14,165,233,0.1)"
-            : isHot
-            ? "rgba(239,68,68,0.1)"
-            : "rgba(251,146,60,0.08)",
-          borderColor: isCool
-            ? "rgba(14,165,233,0.3)"
-            : isHot
-            ? "rgba(239,68,68,0.25)"
-            : "rgba(251,146,60,0.25)",
-          boxShadow: isCool
-            ? "0 0 40px rgba(14,165,233,0.2), inset 0 1px 0 rgba(255,255,255,0.08)"
-            : "0 0 40px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
-        }}
-      >
-        {/* Animated shimmer */}
-        {!isCool && (
-          <motion.div
-            className="absolute inset-0 opacity-20"
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            style={{
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
-            }}
-          />
-        )}
-        <div className="text-xs text-white/50 font-semibold tracking-widest uppercase mb-2">
-          Teplota v byte
-        </div>
-        <motion.div
-          key={temp}
-          className="text-5xl font-black tabular-nums"
-          style={{
-            color: isCool ? "#38bdf8" : isHot ? "#ef4444" : "#fb923c",
-            textShadow: isCool
-              ? "0 0 20px rgba(56,189,248,0.5)"
-              : "0 0 20px rgba(239,68,68,0.4)",
-          }}
-        >
-          {temp}°C
-        </motion.div>
-        <div className="text-xs mt-2 font-medium" style={{ color: isCool ? "#38bdf8" : "#fb923c" }}>
-          {isCool ? "✓ Ideálna teplota" : isHot ? "Prehriatý vzduch" : "Klimeon chladí…"}
-        </div>
-      </div>
-      {/* Arrow down */}
-      {isCool && (
-        <motion.div
-          initial={{ opacity: 0, scaleY: 0 }}
-          animate={{ opacity: 1, scaleY: 1 }}
-          className="w-px h-8 mt-2"
-          style={{ background: "linear-gradient(180deg, rgba(56,189,248,0.4), transparent)" }}
-        />
-      )}
-    </motion.div>
-  )
-}
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.7, delay, ease: "easeOut" as const },
+})
 
 export default function HeroSection() {
   return (
     <section
-      className="relative min-h-screen flex flex-col overflow-hidden"
+      className="relative min-h-screen overflow-hidden"
       style={{ background: "#050505" }}
     >
-      {/* Full-screen 3D Canvas — behind everything */}
-      <div className="absolute inset-0 z-0">
-        <HeroCanvas />
+      {/* ── BACKGROUND GLOWS ── */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Left warm glow (heat) */}
+        <div
+          className="absolute -top-40 -left-40 w-[700px] h-[700px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(239,68,68,0.06) 0%, transparent 70%)",
+          }}
+        />
+        {/* Right cool glow */}
+        <div
+          className="absolute top-20 right-0 w-[600px] h-[600px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(14,165,233,0.08) 0%, transparent 70%)",
+          }}
+        />
+        {/* Center bottom */}
+        <div
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px]"
+          style={{
+            background: "radial-gradient(ellipse, rgba(14,165,233,0.04) 0%, transparent 70%)",
+          }}
+        />
       </div>
 
-      {/* Gradient overlay — fades canvas at bottom */}
+      {/* ── NOISE GRAIN ── */}
       <div
-        className="absolute inset-0 z-[1] pointer-events-none"
+        className="absolute inset-0 opacity-[0.025] pointer-events-none"
         style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% 100%, #050505 0%, transparent 70%)",
-        }}
-      />
-      <div
-        className="absolute bottom-0 left-0 right-0 h-40 z-[1] pointer-events-none"
-        style={{
-          background: "linear-gradient(to top, #050505, transparent)",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }}
       />
 
-      {/* CONTENT */}
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Top: badge row (mobile center, desktop top-right) */}
-        <div className="flex justify-center md:justify-end px-6 pt-28 md:pt-32 md:pr-16">
-          <TempBadge />
-        </div>
+      {/* ── MAIN GRID LAYOUT ── */}
+      <div className="relative z-10 min-h-screen grid lg:grid-cols-2 items-center max-w-7xl mx-auto px-6 md:px-10 lg:px-16 pt-24 pb-16 gap-12 lg:gap-0">
 
-        {/* Middle: main text */}
-        <div className="flex-1 flex flex-col justify-end pb-12 px-6 md:px-12 lg:px-20 max-w-5xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-sky-500/20 bg-sky-500/8 text-sky-400 text-xs font-semibold tracking-wider mb-6 w-fit"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            Profesionálna montáž na Slovensku
+        {/* ══ LEFT: TEXT CONTENT ══ */}
+        <div className="flex flex-col justify-center order-2 lg:order-1">
+
+          {/* Badge */}
+          <motion.div {...fadeUp(0.1)} className="flex items-center gap-2 mb-7 w-fit">
+            <div
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide"
+              style={{
+                background: "rgba(14,165,233,0.08)",
+                border: "1px solid rgba(14,165,233,0.2)",
+                color: "#38bdf8",
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+              Profesionálna montáž na Slovensku
+            </div>
           </motion.div>
 
+          {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[1.02] tracking-tight text-white"
+            {...fadeUp(0.2)}
+            className="text-5xl sm:text-6xl xl:text-7xl font-black leading-[1.0] tracking-tight text-white mb-6"
           >
-            Komfort,
+            Komfort,{" "}
             <br />
             <span
               style={{
-                background: "linear-gradient(135deg, #ffffff 20%, #38bdf8 100%)",
+                background: "linear-gradient(135deg, #38bdf8 0%, #818cf8 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -165,82 +91,114 @@ export default function HeroSection() {
             </span>
           </motion.h1>
 
+          {/* Sub */}
           <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.55 }}
-            className="mt-5 text-base md:text-lg text-white/50 max-w-lg leading-relaxed"
+            {...fadeUp(0.3)}
+            className="text-base md:text-lg leading-relaxed mb-8 max-w-md"
+            style={{ color: "rgba(245,245,245,0.5)" }}
           >
-            Profesionálna montáž klimatizácie pre domy, byty a kancelárie na Slovensku.
-            Rýchlo, spoľahlivo a s plnou zárukou.
+            Montáž klimatizácie pre byty, domy a kancelárie.
+            Prémiové značky, záruka spokojnosti, odpoveď do 15 minút.
           </motion.p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="mt-8 flex flex-wrap gap-3"
-          >
+          {/* Check list */}
+          <motion.ul {...fadeUp(0.38)} className="flex flex-col gap-2 mb-9">
+            {["Bezplatná obhliadka a cenová ponuka", "Montáž do 48 hodín", "Záručný servis 5 rokov"].map((item) => (
+              <li key={item} className="flex items-center gap-2.5 text-sm" style={{ color: "rgba(245,245,245,0.6)" }}>
+                <CheckCircle size={14} className="text-sky-400 flex-shrink-0" />
+                {item}
+              </li>
+            ))}
+          </motion.ul>
+
+          {/* CTAs */}
+          <motion.div {...fadeUp(0.45)} className="flex flex-wrap gap-3 mb-10">
             <a
               href="#cenova-ponuka"
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-sky-500 hover:bg-sky-400 active:scale-95 text-white font-bold rounded-full transition-all duration-200 text-sm"
-              style={{ boxShadow: "0 0 30px rgba(14,165,233,0.4)" }}
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full font-bold text-sm text-white transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{
+                background: "linear-gradient(135deg, #0ea5e9, #6366f1)",
+                boxShadow: "0 0 32px rgba(14,165,233,0.35), inset 0 1px 0 rgba(255,255,255,0.15)",
+              }}
             >
               Získať cenovú ponuku
-              <ArrowRight size={16} />
+              <ArrowRight size={15} />
             </a>
             <a
-              href="#referencie"
-              className="inline-flex items-center gap-2 px-7 py-3.5 border border-white/15 text-white/70 hover:text-white hover:border-white/30 hover:bg-white/5 active:scale-95 font-medium rounded-full transition-all duration-200 text-sm"
+              href="#montaz"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full font-medium text-sm transition-all duration-200 hover:bg-white/8"
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "rgba(255,255,255,0.7)",
+              }}
             >
-              Pozrieť referencie
+              Ako prebieha montáž
             </a>
           </motion.div>
 
           {/* Stats */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.9 }}
-            className="mt-10 flex flex-wrap gap-6 md:gap-10"
+            {...fadeUp(0.55)}
+            className="flex gap-7 pt-7"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
           >
             {[
-              { icon: <Zap size={15} />, stat: "500+", label: "montáží" },
-              { icon: <Star size={15} />, stat: "4.9★", label: "hodnotenie" },
-              { icon: <Clock size={15} />, stat: "15 min", label: "odpoveď" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3">
+              { icon: Zap, value: "500+", label: "Montáží" },
+              { icon: Star, value: "4.9★", label: "Hodnotenie" },
+              { icon: Clock, value: "15 min", label: "Odpoveď" },
+            ].map(({ icon: Icon, value, label }) => (
+              <div key={label} className="flex items-center gap-2.5">
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-sky-400"
-                  style={{ background: "rgba(14,165,233,0.1)" }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(14,165,233,0.1)", color: "#38bdf8" }}
                 >
-                  {item.icon}
+                  <Icon size={14} />
                 </div>
                 <div>
-                  <div className="text-white font-bold text-base leading-none">{item.stat}</div>
-                  <div className="text-white/40 text-xs mt-0.5">{item.label}</div>
+                  <div className="text-white font-bold text-sm leading-none">{value}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</div>
                 </div>
               </div>
             ))}
           </motion.div>
         </div>
 
-        {/* Scroll hint */}
+        {/* ══ RIGHT: AC ANIMATION ══ */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.8 }}
-          className="relative z-10 flex flex-col items-center gap-2 pb-6 text-white/25"
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 1.0, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative order-1 lg:order-2 flex items-center justify-center"
+          style={{ minHeight: "380px" }}
         >
-          <span className="text-[10px] tracking-[0.2em] uppercase">Scrollovať</span>
-          <motion.div
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <ChevronDown size={16} />
-          </motion.div>
+          {/* Glow behind AC */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(14,165,233,0.1) 0%, transparent 70%)",
+            }}
+          />
+
+          {/* The AC animation fills this box */}
+          <div className="relative w-full" style={{ maxWidth: "540px" }}>
+            <ACAnimation />
+          </div>
         </motion.div>
       </div>
+
+      {/* ── SCROLL HINT ── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.0 }}
+        className="absolute bottom-7 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 z-10"
+        style={{ color: "rgba(255,255,255,0.2)" }}
+      >
+        <span className="text-[10px] font-medium tracking-[0.2em] uppercase">Scrollovať</span>
+        <motion.div animate={{ y: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+          <ChevronDown size={14} />
+        </motion.div>
+      </motion.div>
     </section>
   )
 }
