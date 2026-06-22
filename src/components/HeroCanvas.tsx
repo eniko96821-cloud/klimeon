@@ -1,402 +1,307 @@
 "use client"
 
-import { useRef, useMemo, useEffect, useState } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
-import * as THREE from "three"
+import { motion, useAnimationControls } from "framer-motion"
+import { useEffect, useState } from "react"
 
-/* ══════════════════════════════════════
-   AIR FLOW PARTICLES
-══════════════════════════════════════ */
-function AirFlow({ active }: { active: boolean }) {
-  const ref = useRef<THREE.Points>(null!)
-  const count = 200
-
-  const { pos, vel } = useMemo(() => {
-    const pos = new Float32Array(count * 3)
-    const vel = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      pos[i * 3]     = (Math.random() - 0.5) * 4.2
-      pos[i * 3 + 1] = -0.75 - Math.random() * 0.15
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 0.4
-      vel[i * 3]     = (Math.random() - 0.5) * 0.005
-      vel[i * 3 + 1] = -(0.009 + Math.random() * 0.013)
-      vel[i * 3 + 2] = 0
-    }
-    return { pos, vel }
-  }, [])
-
-  useFrame(() => {
-    if (!ref.current) return
-    const a = ref.current.geometry.attributes.position.array as Float32Array
-    for (let i = 0; i < count; i++) {
-      if (!active) { a[i * 3 + 1] = -999; continue }
-      a[i * 3]     += vel[i * 3]
-      a[i * 3 + 1] += vel[i * 3 + 1]
-      if (a[i * 3 + 1] < -4.2) {
-        a[i * 3]     = (Math.random() - 0.5) * 4.2
-        a[i * 3 + 1] = -0.75
-        a[i * 3 + 2] = (Math.random() - 0.5) * 0.4
-      }
-    }
-    ref.current.geometry.attributes.position.needsUpdate = true
-  })
-
+/* ── SNOWFLAKE PARTICLE ── */
+function Snowflake({ x, delay, duration }: { x: number; delay: number; duration: number }) {
   return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[pos, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.018} color="#7dd3fc" transparent opacity={active ? 0.55 : 0} sizeAttenuation />
-    </points>
+    <motion.div
+      className="absolute text-sky-300 select-none pointer-events-none"
+      style={{ left: `${x}%`, top: "62%", fontSize: "14px", opacity: 0 }}
+      animate={{
+        y: ["0%", "280%"],
+        x: [`${x}%`, `${x + (Math.random() - 0.5) * 8}%`],
+        opacity: [0, 0.8, 0.6, 0],
+        rotate: [0, 180],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: "easeIn",
+      }}
+    >
+      ❄
+    </motion.div>
   )
 }
 
-/* ══════════════════════════════════════
-   COOL RING PULSES
-══════════════════════════════════════ */
-function CoolRings({ active }: { active: boolean }) {
-  const refs = [useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!)]
-
-  useFrame(({ clock }) => {
-    refs.forEach((r, i) => {
-      if (!r.current) return
-      const t = ((clock.getElapsedTime() * 0.55) + i * 1.2) % 3.6
-      const s = 0.2 + t * 0.85
-      r.current.scale.set(s, s * 0.25, 1)
-      const m = r.current.material as THREE.MeshBasicMaterial
-      m.opacity = active ? Math.max(0, (1 - t / 3.6) * 0.14) : 0
-    })
-  })
-
+/* ── AIR WAVE LINE ── */
+function AirWave({ y, delay, width }: { y: number; delay: number; width: number }) {
   return (
-    <group position={[0, -2.0, 0]}>
-      {refs.map((r, i) => (
-        <mesh key={i} ref={r}>
-          <ringGeometry args={[1.0, 1.08, 52]} />
-          <meshBasicMaterial color="#38bdf8" transparent opacity={0} side={THREE.DoubleSide} />
-        </mesh>
-      ))}
-    </group>
+    <motion.div
+      className="absolute rounded-full"
+      style={{
+        height: "2px",
+        width,
+        top: `${y}%`,
+        left: "12%",
+        background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.5), rgba(56,189,248,0.3), transparent)",
+        opacity: 0,
+      }}
+      animate={{
+        x: ["-10%", "30%"],
+        opacity: [0, 0.7, 0.5, 0],
+        scaleX: [0.6, 1, 0.8],
+      }}
+      transition={{
+        duration: 2.2,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    />
   )
 }
 
-/* ══════════════════════════════════════
-   DIGITAL DISPLAY (top-right)
-══════════════════════════════════════ */
-function DigitalDisplay({ temp, on }: { temp: number; on: boolean }) {
-  const glowRef = useRef<THREE.Mesh>(null!)
-  const frameRef = useRef<number>(0)
-
-  useFrame(({ clock }) => {
-    if (!glowRef.current) return
-    const m = glowRef.current.material as THREE.MeshStandardMaterial
-    m.emissiveIntensity = on
-      ? 0.55 + Math.sin(clock.getElapsedTime() * 1.8) * 0.1
-      : 0.0
-    frameRef.current++
-  })
-
-  const digits = String(temp).padStart(2, "0")
-
+/* ── TEMP BADGE ── */
+function TempBadge({ temp }: { temp: number }) {
+  const color = temp > 30 ? "#ef4444" : temp > 26 ? "#fb923c" : "#38bdf8"
   return (
-    <group position={[1.52, 0.28, 0.24]}>
-      {/* Ghost screen background */}
-      <mesh>
-        <boxGeometry args={[0.44, 0.22, 0.002]} />
-        <meshStandardMaterial color="#e8ecf2" roughness={0.2} transparent opacity={0.4} />
-      </mesh>
-      {/* Glow plane */}
-      <mesh ref={glowRef} position={[0, 0, 0.003]}>
-        <boxGeometry args={[0.42, 0.2, 0.001]} />
-        <meshStandardMaterial
-          color="#0ea5e9"
-          emissive="#0ea5e9"
-          emissiveIntensity={0}
-          transparent
-          opacity={on ? 0.18 : 0}
-        />
-      </mesh>
-      {/* Digit segments — simple box approximation */}
-      {on && [0, 1].map((d) => (
-        <group key={d} position={[(d - 0.5) * 0.17, 0, 0.005]}>
-          {/* horizontal top */}
-          <mesh position={[0, 0.06, 0]}>
-            <boxGeometry args={[0.09, 0.014, 0.001]} />
-            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
-          </mesh>
-          {/* horizontal mid */}
-          <mesh position={[0, 0, 0]}>
-            <boxGeometry args={[0.09, 0.014, 0.001]} />
-            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
-          </mesh>
-          {/* horizontal bot */}
-          <mesh position={[0, -0.06, 0]}>
-            <boxGeometry args={[0.09, 0.014, 0.001]} />
-            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
-          </mesh>
-          {/* vertical top-left */}
-          <mesh position={[-0.047, 0.032, 0]}>
-            <boxGeometry args={[0.014, 0.055, 0.001]} />
-            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
-          </mesh>
-          {/* vertical bot-left */}
-          <mesh position={[-0.047, -0.032, 0]}>
-            <boxGeometry args={[0.014, 0.055, 0.001]} />
-            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
-          </mesh>
-          {/* vertical top-right */}
-          <mesh position={[0.047, 0.032, 0]}>
-            <boxGeometry args={[0.014, 0.055, 0.001]} />
-            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
-          </mesh>
-          {/* vertical bot-right */}
-          <mesh position={[0.047, -0.032, 0]}>
-            <boxGeometry args={[0.014, 0.055, 0.001]} />
-            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
-          </mesh>
-        </group>
-      ))}
-    </group>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8, y: -10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ delay: 0.5, type: "spring" }}
+      className="absolute -top-8 right-4 rounded-2xl px-4 py-2 border backdrop-blur-xl"
+      style={{
+        background: "rgba(5,5,5,0.7)",
+        borderColor: `${color}40`,
+        boxShadow: `0 0 24px ${color}30`,
+      }}
+    >
+      <div className="text-xs text-white/40 font-medium tracking-widest uppercase mb-0.5">Teplota</div>
+      <motion.div
+        key={temp}
+        initial={{ y: -6, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.15 }}
+        className="text-3xl font-black tabular-nums"
+        style={{ color, textShadow: `0 0 16px ${color}60` }}
+      >
+        {temp}°C
+      </motion.div>
+    </motion.div>
   )
 }
 
-/* ══════════════════════════════════════
-   VENT FLAP (opens when on)
-══════════════════════════════════════ */
-function VentFlap({ open }: { open: boolean }) {
-  const pivotRef = useRef<THREE.Group>(null!)
-
-  useFrame(() => {
-    if (!pivotRef.current) return
-    const target = open ? -0.52 : 0.0
-    pivotRef.current.rotation.x += (target - pivotRef.current.rotation.x) * 0.05
-  })
-
+/* ── MAIN AC ILLUSTRATION ── */
+function ACSvg({ on }: { on: boolean }) {
   return (
-    <group ref={pivotRef} position={[0, -0.72, 0.24]}>
-      <mesh position={[0, -0.1, 0.04]}>
-        <boxGeometry args={[4.52, 0.2, 0.045]} />
-        <meshStandardMaterial color="#f0f3f8" roughness={0.12} metalness={0.08} />
-      </mesh>
-    </group>
-  )
-}
+    <svg
+      viewBox="0 0 480 180"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-full max-w-lg drop-shadow-2xl"
+      style={{ filter: on ? "drop-shadow(0 0 28px rgba(56,189,248,0.18))" : "none" }}
+    >
+      {/* ── Shadow ── */}
+      <ellipse cx="240" cy="174" rx="180" ry="8" fill="rgba(0,0,0,0.25)" />
 
-/* ══════════════════════════════════════
-   MAIN AC UNIT — pill-shaped premium
-══════════════════════════════════════ */
-function ACUnit({ on, temp }: { on: boolean; temp: number }) {
-  const rootRef = useRef<THREE.Group>(null!)
+      {/* ── Main body ── */}
+      {/* Background white body */}
+      <rect x="12" y="22" width="456" height="142" rx="28" fill="url(#bodyGrad)" />
 
-  useFrame(({ clock }) => {
-    if (!rootRef.current) return
-    rootRef.current.position.y = Math.sin(clock.getElapsedTime() * 0.55) * 0.045
-  })
+      {/* Top gloss highlight */}
+      <rect x="20" y="24" width="440" height="48" rx="22"
+        fill="url(#gloss)" opacity="0.7" />
 
-  return (
-    <group ref={rootRef}>
+      {/* ── Silver accent band ── */}
+      <rect x="14" y="128" width="452" height="20" rx="4" fill="url(#silverBand)" />
 
-      {/* ── UPPER SHELL (large pill top half) ── */}
-      {/* The rounded pill look comes from a half-cylinder on top + box body */}
-      <mesh position={[0, 0.36, 0]} castShadow>
-        <cylinderGeometry args={[2.26, 2.26, 0.46, 64, 1, false, 0, Math.PI]} />
-        <meshStandardMaterial color="#f4f7fb" roughness={0.06} metalness={0.12} />
-      </mesh>
-      {/* Left half-sphere cap */}
-      <mesh position={[-2.26, 0.36, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
-        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
-        <meshStandardMaterial color="#f4f7fb" roughness={0.06} metalness={0.12} />
-      </mesh>
-      {/* Right half-sphere cap */}
-      <mesh position={[2.26, 0.36, 0]} rotation={[0, -Math.PI / 2, 0]} castShadow>
-        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
-        <meshStandardMaterial color="#f4f7fb" roughness={0.06} metalness={0.12} />
-      </mesh>
-
-      {/* ── MAIN RECTANGULAR BODY ── */}
-      <mesh position={[0, -0.1, 0]} castShadow>
-        <boxGeometry args={[4.52, 0.9, 0.46]} />
-        <meshStandardMaterial color="#f0f4f9" roughness={0.07} metalness={0.1} />
-      </mesh>
-
-      {/* ── FRONT FACE (subtle lighter panel) ── */}
-      <mesh position={[0, 0.12, 0.234]}>
-        <boxGeometry args={[4.48, 1.1, 0.004]} />
-        <meshStandardMaterial color="#f8fafd" roughness={0.04} metalness={0.06} />
-      </mesh>
-
-      {/* ── SILVER ACCENT BAND ── */}
-      <mesh position={[0, -0.52, 0.22]}>
-        <boxGeometry args={[4.45, 0.06, 0.015]} />
-        <meshStandardMaterial color="#b8c4d0" roughness={0.15} metalness={0.7} />
-      </mesh>
-
-      {/* ── LOWER VENT AREA (recessed, darker) ── */}
-      <mesh position={[0, -0.7, 0.18]}>
-        <boxGeometry args={[4.48, 0.32, 0.04]} />
-        <meshStandardMaterial color="#d8dde6" roughness={0.3} metalness={0.2} />
-      </mesh>
-
-      {/* Louver lines inside vent */}
-      {Array.from({ length: 10 }).map((_, i) => (
-        <mesh key={i} position={[0, -0.58 - i * 0.028, 0.2]}>
-          <boxGeometry args={[4.3, 0.006, 0.025]} />
-          <meshStandardMaterial color="#c0c8d4" roughness={0.4} metalness={0.3} />
-        </mesh>
+      {/* ── Bottom vent area ── */}
+      <rect x="14" y="142" width="452" height="22" rx="6" fill="#dde4ed" />
+      {/* Louver slats */}
+      {Array.from({ length: 14 }).map((_, i) => (
+        <rect key={i} x={28 + i * 31} y="144" width="20" height="18" rx="2" fill="#c8d2de" />
       ))}
 
-      {/* ── LOGO TEXT AREA (center) ── */}
-      <mesh position={[0, 0.04, 0.236]}>
-        <boxGeometry args={[0.55, 0.05, 0.001]} />
-        <meshStandardMaterial
-          color="#c0cad6"
-          roughness={0.3}
-        />
-      </mesh>
-      {/* Tiny klimeon lettering dots (decorative) */}
-      {[-0.18, -0.09, 0, 0.09, 0.18].map((x, i) => (
-        <mesh key={i} position={[x, 0.04, 0.237]}>
-          <boxGeometry args={[0.032, 0.016, 0.001]} />
-          <meshStandardMaterial color="#a0aab6" roughness={0.5} />
-        </mesh>
-      ))}
+      {/* ── Vent flap (animated open) ── */}
+      <motion.rect
+        x="14" y="158" width="452" height="6" rx="3"
+        fill="#b8c4d2"
+        animate={{ y: on ? 164 : 158, scaleY: on ? 0.6 : 1 }}
+        transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 60 }}
+      />
 
-      {/* ── BOTTOM ROUNDED EDGE ── */}
-      <mesh position={[0, -0.88, 0]} castShadow>
-        <cylinderGeometry args={[2.26, 2.26, 0.46, 64, 1, false, Math.PI, Math.PI]} />
-        <meshStandardMaterial color="#e8ecf2" roughness={0.1} metalness={0.1} />
-      </mesh>
-      {/* Left bottom-sphere cap */}
-      <mesh position={[-2.26, -0.88, 0]} rotation={[0, -Math.PI / 2, 0]} castShadow>
-        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
-        <meshStandardMaterial color="#e8ecf2" roughness={0.1} metalness={0.1} />
-      </mesh>
-      {/* Right bottom-sphere cap */}
-      <mesh position={[2.26, -0.88, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
-        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
-        <meshStandardMaterial color="#e8ecf2" roughness={0.1} metalness={0.1} />
-      </mesh>
-
-      {/* Left end cap fill */}
-      <mesh position={[-2.26, -0.26, 0]}>
-        <boxGeometry args={[0.46, 1.24, 0.46]} />
-        <meshStandardMaterial color="#eef1f7" roughness={0.08} metalness={0.1} />
-      </mesh>
-      {/* Right end cap fill */}
-      <mesh position={[2.26, -0.26, 0]}>
-        <boxGeometry args={[0.46, 1.24, 0.46]} />
-        <meshStandardMaterial color="#eef1f7" roughness={0.08} metalness={0.1} />
-      </mesh>
-
-      {/* ── VENT FLAP ── */}
-      <VentFlap open={on} />
-
-      {/* ── DIGITAL DISPLAY ── */}
-      <DigitalDisplay temp={temp} on={on} />
-
-      {/* ── GLOW LIGHT WHEN ON ── */}
+      {/* ── Digital display (top right) ── */}
+      <rect x="368" y="38" width="80" height="52" rx="8" fill="#0a1420" />
+      <rect x="371" y="41" width="74" height="46" rx="6" fill="#0d1c2e" />
+      {/* Display glow when on */}
       {on && (
-        <pointLight position={[0, -1.4, 1.8]} color="#38bdf8" intensity={1.0} distance={5} />
+        <rect x="371" y="41" width="74" height="46" rx="6"
+          fill="none" stroke="#0ea5e9" strokeWidth="1" opacity="0.6" />
       )}
-    </group>
+      {/* Temperature digits in display */}
+      <motion.text
+        x="408"
+        y="70"
+        textAnchor="middle"
+        fontFamily="monospace"
+        fontWeight="bold"
+        fontSize="20"
+        animate={{ fill: on ? "#38bdf8" : "#334455" }}
+        transition={{ duration: 0.5 }}
+      >
+        22°
+      </motion.text>
+
+      {/* LED dot */}
+      <motion.circle
+        cx="398" cy="78" r="3"
+        animate={{ fill: on ? "#38bdf8" : "#223", opacity: on ? 1 : 0.3 }}
+        transition={{ duration: 0.4 }}
+      />
+
+      {/* LED blink */}
+      {on && (
+        <motion.circle cx="398" cy="78" r="5"
+          animate={{ opacity: [0.4, 0, 0.4], r: [3, 7, 3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          fill="none" stroke="#38bdf8" strokeWidth="1"
+        />
+      )}
+
+      {/* ── Logo text ── */}
+      <text x="200" y="90" textAnchor="middle"
+        fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600"
+        fill="#a0adb8" letterSpacing="4">
+        KLIMEON
+      </text>
+
+      {/* ── Subtle crease line ── */}
+      <line x1="20" y1="108" x2="460" y2="108" stroke="#d0d8e4" strokeWidth="0.8" />
+
+      {/* ── Blue glow stripe when on ── */}
+      <motion.rect
+        x="14" y="126" width="452" height="3" rx="1.5"
+        animate={{ fill: on ? "#0ea5e9" : "#b0bcc8", opacity: on ? 0.8 : 0.4 }}
+        transition={{ duration: 0.6 }}
+      />
+      {on && (
+        <motion.rect
+          x="14" y="126" width="452" height="3" rx="1.5"
+          fill="#38bdf8"
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 2.5, repeat: Infinity }}
+        />
+      )}
+
+      {/* ── Gradients ── */}
+      <defs>
+        <linearGradient id="bodyGrad" x1="240" y1="22" x2="240" y2="164" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#f8fafd" />
+          <stop offset="60%" stopColor="#f0f4f9" />
+          <stop offset="100%" stopColor="#e4eaf2" />
+        </linearGradient>
+        <linearGradient id="gloss" x1="240" y1="24" x2="240" y2="72" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
+        </linearGradient>
+        <linearGradient id="silverBand" x1="14" y1="138" x2="466" y2="138" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#b0bcc8" />
+          <stop offset="30%" stopColor="#d0dae4" />
+          <stop offset="50%" stopColor="#e0e8f0" />
+          <stop offset="70%" stopColor="#d0dae4" />
+          <stop offset="100%" stopColor="#b0bcc8" />
+        </linearGradient>
+      </defs>
+    </svg>
   )
 }
 
-/* ══════════════════════════════════════
-   SUBTLE AMBIENT GLOW BEHIND UNIT
-══════════════════════════════════════ */
-function BackGlow({ active }: { active: boolean }) {
-  const ref = useRef<THREE.Mesh>(null!)
+/* ── SNOWFLAKES CONFIG ── */
+const FLAKES = [
+  { x: 18, delay: 0.2, duration: 2.8 },
+  { x: 30, delay: 0.8, duration: 3.2 },
+  { x: 42, delay: 0.0, duration: 2.5 },
+  { x: 55, delay: 1.2, duration: 3.0 },
+  { x: 66, delay: 0.4, duration: 2.7 },
+  { x: 74, delay: 1.6, duration: 3.4 },
+  { x: 24, delay: 1.0, duration: 2.9 },
+  { x: 60, delay: 0.6, duration: 2.6 },
+]
 
-  useFrame(({ clock }) => {
-    if (!ref.current) return
-    const m = ref.current.material as THREE.MeshBasicMaterial
-    m.opacity = active
-      ? 0.08 + Math.sin(clock.getElapsedTime() * 0.8) * 0.025
-      : 0.0
-  })
+const WAVES = [
+  { y: 67, delay: 0,   width: 120 },
+  { y: 71, delay: 0.4, width: 90  },
+  { y: 75, delay: 0.8, width: 140 },
+  { y: 69, delay: 1.2, width: 80  },
+  { y: 73, delay: 0.2, width: 110 },
+]
 
-  return (
-    <mesh ref={ref} position={[0, -0.1, -0.35]}>
-      <planeGeometry args={[7, 4]} />
-      <meshBasicMaterial color="#0ea5e9" transparent opacity={0} />
-    </mesh>
-  )
-}
-
-/* ══════════════════════════════════════
-   CAMERA FOLLOW MOUSE
-══════════════════════════════════════ */
-function CameraFollow() {
-  const mouse = useRef({ x: 0, y: 0 })
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      mouse.current.x = (e.clientX / window.innerWidth - 0.5) * 0.65
-      mouse.current.y = -(e.clientY / window.innerHeight - 0.5) * 0.3
-    }
-    window.addEventListener("mousemove", h)
-    return () => window.removeEventListener("mousemove", h)
-  }, [])
-
-  useFrame(({ camera }) => {
-    camera.position.x += (mouse.current.x - camera.position.x) * 0.03
-    camera.position.y += (mouse.current.y + 0.1 - camera.position.y) * 0.03
-    camera.lookAt(0, -0.1, 0)
-  })
-
-  return null
-}
-
-/* ══════════════════════════════════════
-   SCENE
-══════════════════════════════════════ */
-function Scene() {
+/* ── MAIN EXPORT ── */
+export default function HeroCanvas() {
   const [on, setOn] = useState(false)
-  const [temp, setTemp] = useState(34)
+  const [temp, setTemp] = useState(36)
 
   useEffect(() => {
-    const t1 = setTimeout(() => setOn(true), 1600)
-    let t = 34
+    const t1 = setTimeout(() => setOn(true), 1400)
+    let t = 36
     const iv = setInterval(() => {
-      t = Math.max(22, t - 0.35)
+      t = Math.max(22, t - 0.5)
       setTemp(Math.round(t))
       if (t <= 22) clearInterval(iv)
-    }, 110)
+    }, 120)
     return () => { clearTimeout(t1); clearInterval(iv) }
   }, [])
 
   return (
-    <>
-      {/* Lights */}
-      <ambientLight intensity={1.1} color="#ffffff" />
-      <directionalLight position={[1, 3, 5]} intensity={1.6} color="#ffffff" castShadow />
-      <directionalLight position={[-2, 1, 3]} intensity={0.5} color="#ddeeff" />
-      <directionalLight position={[0, -2, 4]} intensity={0.3} color="#ffffff" />
-      <spotLight position={[0, 4, 4]} angle={0.6} intensity={0.8} color="#ffffff" penumbra={0.4} />
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="relative w-full max-w-xl px-6">
 
-      <BackGlow active={on} />
-      <ACUnit on={on} temp={temp} />
-      <AirFlow active={on} />
-      <CoolRings active={on} />
-      <CameraFollow />
-    </>
-  )
-}
+        {/* TEMP BADGE */}
+        <TempBadge temp={temp} />
 
-/* ══════════════════════════════════════
-   EXPORT
-══════════════════════════════════════ */
-export default function HeroCanvas() {
-  return (
-    <Canvas
-      shadows
-      camera={{ position: [0, 0, 7.5], fov: 38 }}
-      gl={{ antialias: true, alpha: true }}
-      style={{ background: "transparent" }}
-      dpr={[1, 2]}
-    >
-      <Scene />
-    </Canvas>
+        {/* AIR WAVES */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {on && WAVES.map((w, i) => (
+            <AirWave key={i} {...w} />
+          ))}
+        </div>
+
+        {/* AC UNIT */}
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            animation: "float 4s ease-in-out infinite",
+          }}
+        >
+          <style>{`
+            @keyframes float {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-10px); }
+            }
+          `}</style>
+          <ACSvg on={on} />
+        </motion.div>
+
+        {/* SNOWFLAKES */}
+        <div className="absolute inset-0 overflow-visible pointer-events-none">
+          {on && FLAKES.map((f, i) => (
+            <Snowflake key={i} {...f} />
+          ))}
+        </div>
+
+        {/* ON label */}
+        {on && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs text-sky-400/70 font-medium"
+          >
+            <motion.span
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block"
+            />
+            Klimeon beží · Chladenie aktívne
+          </motion.div>
+        )}
+      </div>
+    </div>
   )
 }
