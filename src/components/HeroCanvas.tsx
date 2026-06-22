@@ -2,39 +2,40 @@
 
 import { useRef, useMemo, useEffect, useState } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
-import { Environment, Stars, Float } from "@react-three/drei"
 import * as THREE from "three"
 
-/* ─── AIR FLOW PARTICLES ─── */
+/* ══════════════════════════════════════
+   AIR FLOW PARTICLES
+══════════════════════════════════════ */
 function AirFlow({ active }: { active: boolean }) {
-  const count = 180
   const ref = useRef<THREE.Points>(null!)
+  const count = 200
 
   const { pos, vel } = useMemo(() => {
     const pos = new Float32Array(count * 3)
     const vel = new Float32Array(count * 3)
     for (let i = 0; i < count; i++) {
-      pos[i * 3]     = (Math.random() - 0.5) * 3.6
-      pos[i * 3 + 1] = -0.6 - Math.random() * 0.2
-      pos[i * 3 + 2] = 0.2 + Math.random() * 0.1
-      vel[i * 3]     = (Math.random() - 0.5) * 0.006
-      vel[i * 3 + 1] = -(0.01 + Math.random() * 0.015)
+      pos[i * 3]     = (Math.random() - 0.5) * 4.2
+      pos[i * 3 + 1] = -0.75 - Math.random() * 0.15
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 0.4
+      vel[i * 3]     = (Math.random() - 0.5) * 0.005
+      vel[i * 3 + 1] = -(0.009 + Math.random() * 0.013)
       vel[i * 3 + 2] = 0
     }
     return { pos, vel }
   }, [])
 
   useFrame(() => {
-    if (!ref.current || !active) return
-    const arr = ref.current.geometry.attributes.position.array as Float32Array
+    if (!ref.current) return
+    const a = ref.current.geometry.attributes.position.array as Float32Array
     for (let i = 0; i < count; i++) {
-      arr[i * 3]     += vel[i * 3]
-      arr[i * 3 + 1] += vel[i * 3 + 1]
-      arr[i * 3 + 2] += vel[i * 3 + 2]
-      if (arr[i * 3 + 1] < -3.8) {
-        arr[i * 3]     = (Math.random() - 0.5) * 3.6
-        arr[i * 3 + 1] = -0.6
-        arr[i * 3 + 2] = 0.2 + Math.random() * 0.1
+      if (!active) { a[i * 3 + 1] = -999; continue }
+      a[i * 3]     += vel[i * 3]
+      a[i * 3 + 1] += vel[i * 3 + 1]
+      if (a[i * 3 + 1] < -4.2) {
+        a[i * 3]     = (Math.random() - 0.5) * 4.2
+        a[i * 3 + 1] = -0.75
+        a[i * 3 + 2] = (Math.random() - 0.5) * 0.4
       }
     }
     ref.current.geometry.attributes.position.needsUpdate = true
@@ -45,37 +46,33 @@ function AirFlow({ active }: { active: boolean }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[pos, 3]} />
       </bufferGeometry>
-      <pointsMaterial
-        size={0.022}
-        color="#7dd3fc"
-        transparent
-        opacity={active ? 0.65 : 0}
-        sizeAttenuation
-      />
+      <pointsMaterial size={0.018} color="#7dd3fc" transparent opacity={active ? 0.55 : 0} sizeAttenuation />
     </points>
   )
 }
 
-/* ─── COOL RING WAVES ─── */
-function CoolWaves({ active }: { active: boolean }) {
+/* ══════════════════════════════════════
+   COOL RING PULSES
+══════════════════════════════════════ */
+function CoolRings({ active }: { active: boolean }) {
   const refs = [useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!)]
 
   useFrame(({ clock }) => {
     refs.forEach((r, i) => {
       if (!r.current) return
-      const t = ((clock.getElapsedTime() * 0.6) + i * 1.1) % 3.3
-      const s = 0.3 + t * 1.0
-      r.current.scale.set(s, s * 0.3, 1)
+      const t = ((clock.getElapsedTime() * 0.55) + i * 1.2) % 3.6
+      const s = 0.2 + t * 0.85
+      r.current.scale.set(s, s * 0.25, 1)
       const m = r.current.material as THREE.MeshBasicMaterial
-      m.opacity = active ? Math.max(0, (1 - t / 3.3) * 0.18) : 0
+      m.opacity = active ? Math.max(0, (1 - t / 3.6) * 0.14) : 0
     })
   })
 
   return (
-    <group position={[0, -1.8, 0.1]}>
+    <group position={[0, -2.0, 0]}>
       {refs.map((r, i) => (
         <mesh key={i} ref={r}>
-          <ringGeometry args={[0.9, 1.0, 48]} />
+          <ringGeometry args={[1.0, 1.08, 52]} />
           <meshBasicMaterial color="#38bdf8" transparent opacity={0} side={THREE.DoubleSide} />
         </mesh>
       ))}
@@ -83,252 +80,318 @@ function CoolWaves({ active }: { active: boolean }) {
   )
 }
 
-/* ─── VENT FLAP ─── */
-function VentFlap({ open }: { open: boolean }) {
-  const ref = useRef<THREE.Group>(null!)
+/* ══════════════════════════════════════
+   DIGITAL DISPLAY (top-right)
+══════════════════════════════════════ */
+function DigitalDisplay({ temp, on }: { temp: number; on: boolean }) {
+  const glowRef = useRef<THREE.Mesh>(null!)
+  const frameRef = useRef<number>(0)
 
-  useFrame(() => {
-    if (!ref.current) return
-    const target = open ? -0.55 : 0
-    ref.current.rotation.x += (target - ref.current.rotation.x) * 0.06
+  useFrame(({ clock }) => {
+    if (!glowRef.current) return
+    const m = glowRef.current.material as THREE.MeshStandardMaterial
+    m.emissiveIntensity = on
+      ? 0.55 + Math.sin(clock.getElapsedTime() * 1.8) * 0.1
+      : 0.0
+    frameRef.current++
   })
 
-  return (
-    // pivot at top of flap
-    <group ref={ref} position={[0, -0.58, 0.22]}>
-      {/* Main flap */}
-      <mesh position={[0, -0.09, 0]}>
-        <boxGeometry args={[3.82, 0.18, 0.04]} />
-        <meshStandardMaterial color="#f0f4f8" roughness={0.08} metalness={0.1} />
-      </mesh>
-    </group>
-  )
-}
+  const digits = String(temp).padStart(2, "0")
 
-/* ─── LOUVER SLATS (inside vent when open) ─── */
-function Louvers({ count = 11 }: { count?: number }) {
   return (
-    <group position={[0, -0.5, 0.17]}>
-      {Array.from({ length: count }).map((_, i) => (
-        <mesh key={i} position={[(i - (count - 1) / 2) * 0.33, 0, 0]} rotation={[0.2, 0, 0]}>
-          <boxGeometry args={[0.025, 0.14, 0.12]} />
-          <meshStandardMaterial color="#2a3540" roughness={0.5} metalness={0.3} />
-        </mesh>
+    <group position={[1.52, 0.28, 0.24]}>
+      {/* Ghost screen background */}
+      <mesh>
+        <boxGeometry args={[0.44, 0.22, 0.002]} />
+        <meshStandardMaterial color="#e8ecf2" roughness={0.2} transparent opacity={0.4} />
+      </mesh>
+      {/* Glow plane */}
+      <mesh ref={glowRef} position={[0, 0, 0.003]}>
+        <boxGeometry args={[0.42, 0.2, 0.001]} />
+        <meshStandardMaterial
+          color="#0ea5e9"
+          emissive="#0ea5e9"
+          emissiveIntensity={0}
+          transparent
+          opacity={on ? 0.18 : 0}
+        />
+      </mesh>
+      {/* Digit segments — simple box approximation */}
+      {on && [0, 1].map((d) => (
+        <group key={d} position={[(d - 0.5) * 0.17, 0, 0.005]}>
+          {/* horizontal top */}
+          <mesh position={[0, 0.06, 0]}>
+            <boxGeometry args={[0.09, 0.014, 0.001]} />
+            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
+          </mesh>
+          {/* horizontal mid */}
+          <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[0.09, 0.014, 0.001]} />
+            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
+          </mesh>
+          {/* horizontal bot */}
+          <mesh position={[0, -0.06, 0]}>
+            <boxGeometry args={[0.09, 0.014, 0.001]} />
+            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
+          </mesh>
+          {/* vertical top-left */}
+          <mesh position={[-0.047, 0.032, 0]}>
+            <boxGeometry args={[0.014, 0.055, 0.001]} />
+            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
+          </mesh>
+          {/* vertical bot-left */}
+          <mesh position={[-0.047, -0.032, 0]}>
+            <boxGeometry args={[0.014, 0.055, 0.001]} />
+            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
+          </mesh>
+          {/* vertical top-right */}
+          <mesh position={[0.047, 0.032, 0]}>
+            <boxGeometry args={[0.014, 0.055, 0.001]} />
+            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
+          </mesh>
+          {/* vertical bot-right */}
+          <mesh position={[0.047, -0.032, 0]}>
+            <boxGeometry args={[0.014, 0.055, 0.001]} />
+            <meshStandardMaterial color="#0ea5e9" emissive="#0ea5e9" emissiveIntensity={0.9} />
+          </mesh>
+        </group>
       ))}
     </group>
   )
 }
 
-/* ─── DIGITAL DISPLAY (right side) ─── */
-function Display({ on, temp }: { on: boolean; temp: number }) {
-  const glowRef = useRef<THREE.Mesh>(null!)
+/* ══════════════════════════════════════
+   VENT FLAP (opens when on)
+══════════════════════════════════════ */
+function VentFlap({ open }: { open: boolean }) {
+  const pivotRef = useRef<THREE.Group>(null!)
 
-  useFrame(({ clock }) => {
-    if (!glowRef.current) return
-    const m = glowRef.current.material as THREE.MeshStandardMaterial
-    m.emissiveIntensity = on ? 0.5 + Math.sin(clock.getElapsedTime() * 1.5) * 0.15 : 0
+  useFrame(() => {
+    if (!pivotRef.current) return
+    const target = open ? -0.52 : 0.0
+    pivotRef.current.rotation.x += (target - pivotRef.current.rotation.x) * 0.05
   })
 
   return (
-    <group position={[1.65, 0.05, 0.235]}>
-      {/* Panel */}
-      <mesh>
-        <boxGeometry args={[0.28, 0.32, 0.012]} />
-        <meshStandardMaterial color="#e8edf3" roughness={0.05} metalness={0.2} />
-      </mesh>
-      {/* Screen */}
-      <mesh ref={glowRef} position={[0, 0.04, 0.008]}>
-        <boxGeometry args={[0.2, 0.12, 0.002]} />
-        <meshStandardMaterial
-          color={on ? "#0ea5e9" : "#1a2030"}
-          emissive={on ? "#0ea5e9" : "#000"}
-          emissiveIntensity={0}
-          roughness={0.1}
-        />
-      </mesh>
-      {/* LED dot */}
-      <mesh position={[0, -0.1, 0.008]}>
-        <circleGeometry args={[0.018, 12]} />
-        <meshStandardMaterial
-          color={on ? "#38bdf8" : "#333"}
-          emissive={on ? "#38bdf8" : "#000"}
-          emissiveIntensity={on ? 1 : 0}
-        />
+    <group ref={pivotRef} position={[0, -0.72, 0.24]}>
+      <mesh position={[0, -0.1, 0.04]}>
+        <boxGeometry args={[4.52, 0.2, 0.045]} />
+        <meshStandardMaterial color="#f0f3f8" roughness={0.12} metalness={0.08} />
       </mesh>
     </group>
   )
 }
 
-/* ─── MAIN AC BODY ─── */
+/* ══════════════════════════════════════
+   MAIN AC UNIT — pill-shaped premium
+══════════════════════════════════════ */
 function ACUnit({ on, temp }: { on: boolean; temp: number }) {
-  const floatRef = useRef<THREE.Group>(null!)
+  const rootRef = useRef<THREE.Group>(null!)
 
   useFrame(({ clock }) => {
-    if (!floatRef.current) return
-    floatRef.current.position.y = Math.sin(clock.getElapsedTime() * 0.5) * 0.04
+    if (!rootRef.current) return
+    rootRef.current.position.y = Math.sin(clock.getElapsedTime() * 0.55) * 0.045
   })
 
   return (
-    <group ref={floatRef} position={[0, 0.2, 0]}>
-      {/* ── MAIN HOUSING ── */}
-      {/* Core body */}
-      <mesh castShadow>
-        <boxGeometry args={[4.0, 1.28, 0.44]} />
+    <group ref={rootRef}>
+
+      {/* ── UPPER SHELL (large pill top half) ── */}
+      {/* The rounded pill look comes from a half-cylinder on top + box body */}
+      <mesh position={[0, 0.36, 0]} castShadow>
+        <cylinderGeometry args={[2.26, 2.26, 0.46, 64, 1, false, 0, Math.PI]} />
+        <meshStandardMaterial color="#f4f7fb" roughness={0.06} metalness={0.12} />
+      </mesh>
+      {/* Left half-sphere cap */}
+      <mesh position={[-2.26, 0.36, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
+        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
+        <meshStandardMaterial color="#f4f7fb" roughness={0.06} metalness={0.12} />
+      </mesh>
+      {/* Right half-sphere cap */}
+      <mesh position={[2.26, 0.36, 0]} rotation={[0, -Math.PI / 2, 0]} castShadow>
+        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
+        <meshStandardMaterial color="#f4f7fb" roughness={0.06} metalness={0.12} />
+      </mesh>
+
+      {/* ── MAIN RECTANGULAR BODY ── */}
+      <mesh position={[0, -0.1, 0]} castShadow>
+        <boxGeometry args={[4.52, 0.9, 0.46]} />
+        <meshStandardMaterial color="#f0f4f9" roughness={0.07} metalness={0.1} />
+      </mesh>
+
+      {/* ── FRONT FACE (subtle lighter panel) ── */}
+      <mesh position={[0, 0.12, 0.234]}>
+        <boxGeometry args={[4.48, 1.1, 0.004]} />
+        <meshStandardMaterial color="#f8fafd" roughness={0.04} metalness={0.06} />
+      </mesh>
+
+      {/* ── SILVER ACCENT BAND ── */}
+      <mesh position={[0, -0.52, 0.22]}>
+        <boxGeometry args={[4.45, 0.06, 0.015]} />
+        <meshStandardMaterial color="#b8c4d0" roughness={0.15} metalness={0.7} />
+      </mesh>
+
+      {/* ── LOWER VENT AREA (recessed, darker) ── */}
+      <mesh position={[0, -0.7, 0.18]}>
+        <boxGeometry args={[4.48, 0.32, 0.04]} />
+        <meshStandardMaterial color="#d8dde6" roughness={0.3} metalness={0.2} />
+      </mesh>
+
+      {/* Louver lines inside vent */}
+      {Array.from({ length: 10 }).map((_, i) => (
+        <mesh key={i} position={[0, -0.58 - i * 0.028, 0.2]}>
+          <boxGeometry args={[4.3, 0.006, 0.025]} />
+          <meshStandardMaterial color="#c0c8d4" roughness={0.4} metalness={0.3} />
+        </mesh>
+      ))}
+
+      {/* ── LOGO TEXT AREA (center) ── */}
+      <mesh position={[0, 0.04, 0.236]}>
+        <boxGeometry args={[0.55, 0.05, 0.001]} />
         <meshStandardMaterial
-          color="#f2f6fa"
-          roughness={0.06}
-          metalness={0.12}
+          color="#c0cad6"
+          roughness={0.3}
         />
       </mesh>
+      {/* Tiny klimeon lettering dots (decorative) */}
+      {[-0.18, -0.09, 0, 0.09, 0.18].map((x, i) => (
+        <mesh key={i} position={[x, 0.04, 0.237]}>
+          <boxGeometry args={[0.032, 0.016, 0.001]} />
+          <meshStandardMaterial color="#a0aab6" roughness={0.5} />
+        </mesh>
+      ))}
 
-      {/* Top rounded edge (slight bevel effect) */}
-      <mesh position={[0, 0.63, -0.04]}>
-        <cylinderGeometry args={[2.0, 2.0, 0.44, 48, 1, false, 0, Math.PI]} />
-        <meshStandardMaterial color="#edf1f6" roughness={0.05} metalness={0.15} />
+      {/* ── BOTTOM ROUNDED EDGE ── */}
+      <mesh position={[0, -0.88, 0]} castShadow>
+        <cylinderGeometry args={[2.26, 2.26, 0.46, 64, 1, false, Math.PI, Math.PI]} />
+        <meshStandardMaterial color="#e8ecf2" roughness={0.1} metalness={0.1} />
+      </mesh>
+      {/* Left bottom-sphere cap */}
+      <mesh position={[-2.26, -0.88, 0]} rotation={[0, -Math.PI / 2, 0]} castShadow>
+        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
+        <meshStandardMaterial color="#e8ecf2" roughness={0.1} metalness={0.1} />
+      </mesh>
+      {/* Right bottom-sphere cap */}
+      <mesh position={[2.26, -0.88, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
+        <sphereGeometry args={[0.23, 32, 16, 0, Math.PI]} />
+        <meshStandardMaterial color="#e8ecf2" roughness={0.1} metalness={0.1} />
       </mesh>
 
-      {/* Front face — slightly lighter */}
-      <mesh position={[0, 0, 0.225]}>
-        <boxGeometry args={[3.95, 1.24, 0.005]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.04} metalness={0.08} />
+      {/* Left end cap fill */}
+      <mesh position={[-2.26, -0.26, 0]}>
+        <boxGeometry args={[0.46, 1.24, 0.46]} />
+        <meshStandardMaterial color="#eef1f7" roughness={0.08} metalness={0.1} />
+      </mesh>
+      {/* Right end cap fill */}
+      <mesh position={[2.26, -0.26, 0]}>
+        <boxGeometry args={[0.46, 1.24, 0.46]} />
+        <meshStandardMaterial color="#eef1f7" roughness={0.08} metalness={0.1} />
       </mesh>
 
-      {/* Bottom vent opening (dark slot) */}
-      <mesh position={[0, -0.5, 0.225]}>
-        <boxGeometry args={[3.85, 0.21, 0.006]} />
-        <meshStandardMaterial color="#111820" roughness={0.9} />
-      </mesh>
-
-      {/* Subtle horizontal crease line */}
-      <mesh position={[0, 0.1, 0.228]}>
-        <boxGeometry args={[3.9, 0.007, 0.003]} />
-        <meshStandardMaterial color="#d8e0ea" roughness={0.3} metalness={0.3} />
-      </mesh>
-
-      {/* Left edge cap */}
-      <mesh position={[-1.985, 0, 0]}>
-        <boxGeometry args={[0.03, 1.25, 0.42]} />
-        <meshStandardMaterial color="#dde4ee" roughness={0.1} metalness={0.2} />
-      </mesh>
-      {/* Right edge cap */}
-      <mesh position={[1.985, 0, 0]}>
-        <boxGeometry args={[0.03, 1.25, 0.42]} />
-        <meshStandardMaterial color="#dde4ee" roughness={0.1} metalness={0.2} />
-      </mesh>
-
-      {/* Bottom strip — brand accent line */}
-      <mesh position={[0, -0.62, 0.228]}>
-        <boxGeometry args={[3.85, 0.01, 0.003]} />
-        <meshStandardMaterial
-          color={on ? "#0ea5e9" : "#c0cad6"}
-          emissive={on ? "#0ea5e9" : "#000"}
-          emissiveIntensity={on ? 0.6 : 0}
-        />
-      </mesh>
-
-      {/* Louver slats */}
-      <Louvers count={11} />
-
-      {/* Vent flap */}
+      {/* ── VENT FLAP ── */}
       <VentFlap open={on} />
 
-      {/* Display */}
-      <Display on={on} temp={temp} />
+      {/* ── DIGITAL DISPLAY ── */}
+      <DigitalDisplay temp={temp} on={on} />
 
-      {/* Glow light when on */}
+      {/* ── GLOW LIGHT WHEN ON ── */}
       {on && (
-        <pointLight
-          position={[0, -1.2, 1.5]}
-          color="#38bdf8"
-          intensity={1.2}
-          distance={6}
-        />
+        <pointLight position={[0, -1.4, 1.8]} color="#38bdf8" intensity={1.0} distance={5} />
       )}
     </group>
   )
 }
 
-/* ─── WALL ─── */
-function Wall() {
+/* ══════════════════════════════════════
+   SUBTLE AMBIENT GLOW BEHIND UNIT
+══════════════════════════════════════ */
+function BackGlow({ active }: { active: boolean }) {
+  const ref = useRef<THREE.Mesh>(null!)
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return
+    const m = ref.current.material as THREE.MeshBasicMaterial
+    m.opacity = active
+      ? 0.08 + Math.sin(clock.getElapsedTime() * 0.8) * 0.025
+      : 0.0
+  })
+
   return (
-    <mesh position={[0, 0, -0.55]} receiveShadow>
-      <boxGeometry args={[12, 8, 0.1]} />
-      <meshStandardMaterial color="#0a0e14" roughness={0.95} metalness={0} />
+    <mesh ref={ref} position={[0, -0.1, -0.35]}>
+      <planeGeometry args={[7, 4]} />
+      <meshBasicMaterial color="#0ea5e9" transparent opacity={0} />
     </mesh>
   )
 }
 
-/* ─── WALL SHADOW (projected under unit) ─── */
-function UnitShadow() {
-  return (
-    <mesh position={[0, 0.18, -0.49]}>
-      <boxGeometry args={[4.2, 1.35, 0.01]} />
-      <meshStandardMaterial color="#000" transparent opacity={0.35} roughness={1} />
-    </mesh>
-  )
-}
-
-/* ─── CAMERA FOLLOW ─── */
+/* ══════════════════════════════════════
+   CAMERA FOLLOW MOUSE
+══════════════════════════════════════ */
 function CameraFollow() {
   const mouse = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      mouse.current.x = (e.clientX / window.innerWidth - 0.5) * 0.7
-      mouse.current.y = -(e.clientY / window.innerHeight - 0.5) * 0.35
+    const h = (e: MouseEvent) => {
+      mouse.current.x = (e.clientX / window.innerWidth - 0.5) * 0.65
+      mouse.current.y = -(e.clientY / window.innerHeight - 0.5) * 0.3
     }
-    window.addEventListener("mousemove", onMove)
-    return () => window.removeEventListener("mousemove", onMove)
+    window.addEventListener("mousemove", h)
+    return () => window.removeEventListener("mousemove", h)
   }, [])
 
   useFrame(({ camera }) => {
-    camera.position.x += (mouse.current.x - camera.position.x) * 0.035
-    camera.position.y += (mouse.current.y + 0.15 - camera.position.y) * 0.035
-    camera.lookAt(0, 0.1, 0)
+    camera.position.x += (mouse.current.x - camera.position.x) * 0.03
+    camera.position.y += (mouse.current.y + 0.1 - camera.position.y) * 0.03
+    camera.lookAt(0, -0.1, 0)
   })
 
   return null
 }
 
-/* ─── SCENE ─── */
+/* ══════════════════════════════════════
+   SCENE
+══════════════════════════════════════ */
 function Scene() {
   const [on, setOn] = useState(false)
   const [temp, setTemp] = useState(34)
 
   useEffect(() => {
-    const t1 = setTimeout(() => setOn(true), 1400)
+    const t1 = setTimeout(() => setOn(true), 1600)
     let t = 34
     const iv = setInterval(() => {
-      t = Math.max(22, t - 0.4)
+      t = Math.max(22, t - 0.35)
       setTemp(Math.round(t))
       if (t <= 22) clearInterval(iv)
-    }, 120)
+    }, 110)
     return () => { clearTimeout(t1); clearInterval(iv) }
   }, [])
 
   return (
     <>
-      <Stars radius={28} depth={5} count={220} factor={1.2} saturation={0} fade speed={0.25} />
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[2, 4, 6]} intensity={1.4} color="#ffffff" castShadow />
-      <directionalLight position={[-3, 2, 3]} intensity={0.5} color="#b8d4f0" />
-      <pointLight position={[0, 3, 5]} intensity={0.5} color="#ffffff" />
+      {/* Lights */}
+      <ambientLight intensity={1.1} color="#ffffff" />
+      <directionalLight position={[1, 3, 5]} intensity={1.6} color="#ffffff" castShadow />
+      <directionalLight position={[-2, 1, 3]} intensity={0.5} color="#ddeeff" />
+      <directionalLight position={[0, -2, 4]} intensity={0.3} color="#ffffff" />
+      <spotLight position={[0, 4, 4]} angle={0.6} intensity={0.8} color="#ffffff" penumbra={0.4} />
 
-      <Wall />
-      <UnitShadow />
+      <BackGlow active={on} />
       <ACUnit on={on} temp={temp} />
       <AirFlow active={on} />
-      <CoolWaves active={on} />
+      <CoolRings active={on} />
       <CameraFollow />
     </>
   )
 }
 
+/* ══════════════════════════════════════
+   EXPORT
+══════════════════════════════════════ */
 export default function HeroCanvas() {
   return (
     <Canvas
       shadows
-      camera={{ position: [0, 0.15, 6.2], fov: 42 }}
+      camera={{ position: [0, 0, 7.5], fov: 38 }}
       gl={{ antialias: true, alpha: true }}
       style={{ background: "transparent" }}
       dpr={[1, 2]}
