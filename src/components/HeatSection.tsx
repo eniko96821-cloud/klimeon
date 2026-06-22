@@ -1,258 +1,204 @@
-// FILE: src/components/HeatSection.tsx
 "use client"
 
 import { useRef, useEffect, useState } from "react"
 import { motion, useInView } from "framer-motion"
-import { Thermometer, AlertTriangle, Users } from "lucide-react"
+import { Thermometer, Moon, Brain, HeartPulse } from "lucide-react"
 
-function HeatGauge({ target, inView }: { target: number; inView: boolean }) {
-  const [value, setValue] = useState(0)
+function HeatGauge({ inView }: { inView: boolean }) {
+  const [value, setValue] = useState(18)
 
   useEffect(() => {
     if (!inView) return
-    let v = 0
-    const step = target / 60
+    let v = 18
     const timer = setInterval(() => {
-      v += step
-      if (v >= target) {
-        setValue(target)
-        clearInterval(timer)
-      } else {
-        setValue(Math.round(v))
-      }
+      v += 0.4
+      if (v >= 38) { setValue(38); clearInterval(timer) }
+      else setValue(Math.round(v * 10) / 10)
     }, 30)
     return () => clearInterval(timer)
-  }, [inView, target])
+  }, [inView])
 
-  const pct = (value / 50) * 100
+  const pct = Math.min(100, ((value - 15) / (45 - 15)) * 100)
+  const color = value < 24 ? "#22d3ee" : value < 30 ? "#fb923c" : "#ef4444"
+  const circumference = 2 * Math.PI * 54
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="relative w-40 h-40">
-        <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+    <div className="flex flex-col items-center gap-6">
+      <div className="relative w-48 h-48">
+        <svg viewBox="0 0 128 128" className="w-full h-full" style={{ transform: "rotate(-90deg)" }}>
+          {/* Track */}
+          <circle cx="64" cy="64" r="54" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+          {/* Progress */}
           <circle
-            cx="60"
-            cy="60"
-            r="50"
+            cx="64" cy="64" r="54"
             fill="none"
-            strokeWidth="8"
+            strokeWidth="10"
             strokeLinecap="round"
-            strokeDasharray={`${2 * Math.PI * 50}`}
-            strokeDashoffset={`${2 * Math.PI * 50 * (1 - pct / 100)}`}
-            stroke="url(#heatGrad)"
-            style={{ transition: "stroke-dashoffset 0.05s linear" }}
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - pct / 100)}
+            stroke={color}
+            style={{ transition: "stroke-dashoffset 0.04s linear, stroke 0.5s ease", filter: `drop-shadow(0 0 6px ${color})` }}
           />
           <defs>
-            <linearGradient id="heatGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f97316" />
-              <stop offset="100%" stopColor="#ef4444" />
-            </linearGradient>
+            <radialGradient id="innerGlow">
+              <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </radialGradient>
           </defs>
+          <circle cx="64" cy="64" r="44" fill="url(#innerGlow)" />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
-            className="text-3xl font-bold"
-            style={{ color: "#ef4444", textShadow: "0 0 20px rgba(239,68,68,0.5)" }}
+            className="text-5xl font-black tabular-nums leading-none"
+            style={{ color, textShadow: `0 0 24px ${color}80` }}
           >
-            {value}°
+            {Math.round(value)}°
           </span>
-          <span className="text-xs text-white/40">Celsius</span>
+          <span className="text-xs text-white/40 mt-1 font-medium tracking-widest uppercase">Celsius</span>
         </div>
       </div>
-      <span className="text-sm text-white/50">Priemerná letná teplota bytu</span>
-    </div>
-  )
-}
-
-function HeatRoom({ inView }: { inView: boolean }) {
-  return (
-    <div className="relative w-full max-w-xs mx-auto aspect-square rounded-2xl overflow-hidden border border-white/5">
-      {/* Room walls */}
-      <div className="absolute inset-0" style={{ background: "#0a0a0a" }} />
-      {/* Heat gradient overlay */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={inView ? { opacity: 1 } : { opacity: 0 }}
-        transition={{ duration: 2 }}
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 20% 20%, rgba(239,68,68,0.35) 0%, rgba(251,146,60,0.2) 40%, transparent 70%)",
-        }}
-      />
-      <motion.div
-        animate={inView ? { opacity: [0.3, 0.6, 0.3] } : {}}
-        transition={{ duration: 3, repeat: Infinity }}
-        className="absolute inset-0"
-        style={{
-          background: "radial-gradient(ellipse at 80% 80%, rgba(239,68,68,0.2) 0%, transparent 60%)",
-        }}
-      />
-      {/* Heat shimmer lines */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <motion.div
-          key={i}
-          className="absolute left-0 right-0 h-px"
-          style={{ top: `${20 + i * 15}%`, background: "rgba(239,68,68,0.15)" }}
-          animate={inView ? { scaleX: [0.6, 1, 0.8, 1, 0.6], opacity: [0, 0.4, 0] } : {}}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            delay: i * 0.4,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-      {/* Window */}
-      <div
-        className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-12 rounded border border-white/10"
-        style={{ background: "rgba(251,146,60,0.08)" }}
-      />
-      {/* Sun rays */}
-      {inView && (
-        <motion.div
-          animate={{ opacity: [0.4, 0.8, 0.4] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-16"
-          style={{
-            background: "linear-gradient(to bottom, rgba(251,146,60,0.3), transparent)",
-          }}
-        />
-      )}
-      {/* Temp label */}
-      <div className="absolute bottom-4 right-4 text-2xl font-bold" style={{ color: "#ef4444" }}>
-        38°C
-      </div>
-      {/* Person icon */}
-      <div className="absolute bottom-8 left-8 text-white/20">
-        <Users size={32} />
+      <div className="text-center">
+        <p className="text-white/40 text-sm">Priemerná teplota v byte</p>
+        <p className="text-white/20 text-xs mt-1">počas letných horúčav</p>
       </div>
     </div>
   )
 }
 
-const stats = [
-  { icon: <Thermometer size={20} />, value: "38°C", label: "Priemerná letná teplota", color: "#ef4444" },
-  { icon: <Users size={20} />, value: "67%", label: "Domácností bez klimatizácie", color: "#f97316" },
-  { icon: <AlertTriangle size={20} />, value: "40%", label: "Pokles produktivity v horúčave", color: "#fb923c" },
+const problems = [
+  {
+    icon: Moon,
+    title: "Nekvalitný spánok",
+    desc: "Nad 22°C mozog nevstúpi do hlbokého spánkového cyklu. Unavení každé ráno.",
+    color: "#818cf8",
+  },
+  {
+    icon: Brain,
+    title: "Znížená produktivita",
+    desc: "Štúdie potvrdzujú: pri 30°C klesá pracovný výkon až o 40%.",
+    color: "#fb923c",
+  },
+  {
+    icon: HeartPulse,
+    title: "Zdravotné riziká",
+    desc: "Prehriatý organizmus zaťažuje srdce a kardiovaskulárny systém.",
+    color: "#ef4444",
+  },
 ]
 
 export default function HeatSection() {
   const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, amount: 0.3 })
+  const inView = useInView(ref, { once: true, margin: "-20%" })
 
   return (
     <section
-      id="klimatizacie"
       ref={ref}
-      className="py-28 relative overflow-hidden"
-      style={{ background: "#0a0a0a" }}
+      className="relative py-28 px-6 md:px-12 lg:px-20 overflow-hidden"
+      style={{ background: "#07090c" }}
     >
-      {/* Warm ambient glow */}
+      {/* Background glow */}
       <div
-        className="absolute top-0 right-0 w-96 h-96 rounded-full pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(circle, rgba(239,68,68,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 60% 50% at 70% 40%, rgba(239,68,68,0.07) 0%, transparent 70%)",
         }}
       />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-12">
+      <div className="max-w-6xl mx-auto">
+        {/* Label */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/20 bg-red-500/8 text-red-400 text-xs font-semibold tracking-wider mb-6"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/20 bg-orange-500/5 text-orange-400 text-xs font-medium tracking-wider mb-6">
-            <AlertTriangle size={12} />
-            Realita slovenského leta
-          </div>
-          <h2
-            className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
-            style={{
-              background: "linear-gradient(135deg, #ffffff 0%, #ef4444 60%, #f97316 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            38°C v byte.
-            <br />
-            Bez riešenia.
-          </h2>
-          <p className="mt-6 text-white/50 text-lg max-w-2xl mx-auto leading-relaxed">
-            Každé leto milióny Slovákov trpia v prehriatych bytoch a domoch. Narušený spánok, znížená produktivita a zdravotné riziká — to je realita bez klimatizácie.
-          </p>
+          <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+          Realita slovenského leta
         </motion.div>
 
-        {/* Content grid */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
-          {/* Left: heat room visualization */}
+        {/* Heading */}
+        <motion.h2
+          initial={{ opacity: 0, y: 30 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7, delay: 0.1 }}
+          className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight max-w-2xl mb-6"
+        >
+          38°C v byte.{" "}
+          <span style={{ color: "#ef4444" }}>Bez riešenia.</span>
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="text-white/50 text-lg max-w-xl mb-16 leading-relaxed"
+        >
+          Každé leto milióny Slovákov trápia prehriaté byty a domy. Narušený
+          spánok, znížená produktivita — to je realita bez klimatizácie.
+        </motion.p>
+
+        {/* Main grid */}
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          {/* Left: gauge */}
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="flex flex-col items-center gap-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={inView ? { opacity: 1, scale: 1 } : {}}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="flex justify-center"
           >
-            <HeatRoom inView={inView} />
-            <p className="text-sm text-white/30 text-center max-w-xs">
-              Vizualizácia typického bytu počas letných horúčav na Slovensku
-            </p>
+            <HeatGauge inView={inView} />
           </motion.div>
 
-          {/* Right: gauge + text */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="flex flex-col gap-8"
-          >
-            <HeatGauge target={38} inView={inView} />
-
-            <div className="space-y-4">
-              {[
-                "Narušený a nekvalitný spánok pri teplotách nad 25°C",
-                "Pokles kognitívnych schopností až o 40% pri práci z domu",
-                "Zvýšené riziko dehydratácie a tepelného vyčerpania",
-                "Starí ľudia a deti sú obzvlášť ohrození horúčavami",
-              ].map((text, i) => (
+          {/* Right: problem cards */}
+          <div className="flex flex-col gap-4">
+            {problems.map((p, i) => {
+              const Icon = p.icon
+              return (
                 <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: 20 }}
+                  key={p.title}
+                  initial={{ opacity: 0, x: 30 }}
                   animate={inView ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
-                  className="flex items-start gap-3 p-4 rounded-xl border border-orange-500/10 bg-orange-500/5"
+                  transition={{ duration: 0.6, delay: 0.3 + i * 0.12 }}
+                  className="flex gap-4 p-5 rounded-2xl border"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    borderColor: `${p.color}20`,
+                  }}
                 >
-                  <span className="text-orange-400 mt-0.5 shrink-0">
-                    <AlertTriangle size={14} />
-                  </span>
-                  <span className="text-sm text-white/60 leading-relaxed">{text}</span>
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: `${p.color}15`, color: p.color }}
+                  >
+                    <Icon size={18} />
+                  </div>
+                  <div>
+                    <div className="text-white font-semibold text-sm mb-1">{p.title}</div>
+                    <div className="text-white/45 text-sm leading-relaxed">{p.desc}</div>
+                  </div>
                 </motion.div>
-              ))}
-            </div>
-          </motion.div>
+              )
+            })}
+          </div>
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((s, i) => (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: 0.5 + i * 0.1 }}
-              className="p-6 rounded-2xl border border-white/5 bg-white/3 backdrop-blur-sm text-center"
-            >
-              <div className="flex justify-center mb-3" style={{ color: s.color }}>
-                {s.icon}
-              </div>
-              <div className="text-3xl font-bold mb-1" style={{ color: s.color }}>
-                {s.value}
-              </div>
-              <div className="text-sm text-white/40">{s.label}</div>
-            </motion.div>
+        {/* Bottom stat bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="mt-14 grid grid-cols-3 gap-4 pt-8 border-t border-white/5"
+        >
+          {[
+            { num: "67%", label: "Slovákov bez klimatizácie" },
+            { num: "38°C", label: "Max teplota v byte" },
+            { num: "40%", label: "Pokles produktivity" },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="text-2xl md:text-3xl font-black" style={{ color: "#ef4444" }}>{s.num}</div>
+              <div className="text-white/35 text-xs mt-1">{s.label}</div>
+            </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )
