@@ -90,21 +90,15 @@ export default function HeroCanvas() {
             @keyframes acFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
           `}</style>
 
-          {/* White backing so multiply blend works correctly */}
-          <div
-            className="relative rounded-3xl overflow-hidden"
-            style={{ background: "white" }}
-          >
-            <video
-              src="/ac-animation.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-auto block"
-              style={{ mixBlendMode: "multiply" }}
-            />
-          </div>
+          <video
+            src="/ac-animation.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-auto block"
+            style={{ mixBlendMode: "screen" }}
+          />
         </motion.div>
 
         {/* COLD PARTICLES on top */}
