@@ -3,7 +3,10 @@
 
 import Navigation from "@/components/Navigation"
 import HeroSection from "@/components/HeroSection"
+import dynamic from "next/dynamic"
 import HeatSection from "@/components/HeatSection"
+
+const ScrollStorySection = dynamic(() => import("@/components/ScrollStorySection"), { ssr: false })
 import SolutionSection from "@/components/SolutionSection"
 import ProcessSection from "@/components/ProcessSection"
 import ComparisonSection from "@/components/ComparisonSection"
@@ -18,6 +21,7 @@ export default function Home() {
     <main style={{ background: "#050505" }}>
       <Navigation />
       <HeroSection />
+      <ScrollStorySection />
       <HeatSection />
       <SolutionSection />
       <ProcessSection />
