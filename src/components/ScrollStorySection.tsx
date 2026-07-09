@@ -45,16 +45,16 @@ const STORY_STEPS = [
 function Scene({ progress }: { progress: number }) {
   return (
     <Canvas
-      camera={{ position: [0, 0, 4], fov: 40 }}
+      camera={{ position: [0, 0, 2.8], fov: 45 }}
       shadows
       dpr={[1, 2]}
       style={{ background: "transparent" }}
       gl={{ alpha: true, antialias: true }}
     >
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 8, 5]} intensity={1.4} castShadow />
-      <directionalLight position={[-4, 2, -4]} intensity={0.4} color="#60c8f0" />
-      <pointLight position={[0, -2, 3]} intensity={0.3} color="#818cf8" />
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 8, 5]} intensity={1.6} castShadow />
+      <directionalLight position={[-4, 2, -4]} intensity={0.5} color="#60c8f0" />
+      <pointLight position={[0, -1, 2]} intensity={0.4} color="#818cf8" />
 
       <PresentationControls
         global
@@ -65,11 +65,11 @@ function Scene({ progress }: { progress: number }) {
       </PresentationControls>
 
       <ContactShadows
-        position={[0, -1.8, 0]}
-        opacity={0.35}
-        scale={6}
-        blur={2.5}
-        far={4}
+        position={[0, -1.5, 0]}
+        opacity={0.3}
+        scale={5}
+        blur={2}
+        far={3}
         color="#000820"
       />
       <Environment preset="city" />
